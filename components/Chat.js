@@ -4,30 +4,44 @@ import { useNavigation } from '@react-navigation/native';
 
 import styles from '../styles/chat-styles';
 
+import OpenAI from 'openai';
+import { apiKey } from '../config';
 
 export default function Chat() {
   const navigation = useNavigation();
   const [respuesta, setRespuesta] = useState(null);
+  const [consulta, setConsulta] = useState(null);
 
-  const manejarSeleccion = (estado) => {
+  const manejarSeleccion = async (estado) => {
     setRespuesta(estado);
+    if (estado != null) {
+      await consultarAPI();
+    }
   };
 
-  const respuestas = {
-    Bien: {
-      consejo: 'Sigue cultivando tu fe con humildad y gratitud.',
-      verso: '“Confía en el Señor con todo tu corazón y no te apoyes en tu propio entendimiento.” - Proverbios 3:5',
-      reflexion: 'La vida puede tener altibajos, pero una conexión fuerte con lo divino te ayuda a mantener la calma en medio de la tormenta.'
-    },
-    Regular: {
-      consejo: 'Busca momentos de silencio para reconectar. Dios siempre está dispuesto a escucharte.',
-      verso: '“Acérquense a Dios, y él se acercará a ustedes.” - Santiago 4:8',
-      reflexion: 'A veces nos perdemos en la rutina o los problemas, pero basta una pausa sincera para reencontrarnos con lo esencial.'
-    },
-    Mal: {
-      consejo: 'Dios no te juzga, te espera. Puedes comenzar de nuevo, hoy mismo.',
-      verso: '“El Señor está cerca de los quebrantados de corazón.” - Salmo 34:18',
-      reflexion: 'Los momentos difíciles son oportunidades para crecer. La fe no elimina los problemas, pero te da fuerza para enfrentarlos.'
+  const consultarAPI = async () => {
+    try {
+      const client = new OpenAI({
+        apiKey,
+      });
+
+      const data = await client.responses.create({
+        model: "gpt-4o-mini",
+        input: `Escribe un rezo católico de 55 palabras según:
+          - Mi relación con Dios: ${respuesta}
+          - Situación actual de Perú (crisis social, económica o espiritual)
+
+          Debe ser esperanzador y espiritual. Incluye una cita bíblica al final.`,
+        max_output_tokens: 60,
+      });
+
+      const texto = data.output_text;
+      console.log("Consultando...");
+      setConsulta(texto);
+      console.log("Consultado exitosamente");
+    } catch (error) {
+      console.error('Error consultando OpenAI:', error);
+      setConsulta('Error al consultar la API.');
     }
   };
 
@@ -54,13 +68,13 @@ export default function Chat() {
               <Text style={styles.messageText}>{respuesta}</Text>
             </View>
 
-            <View style={styles.messageBot}>
-              <Text style={styles.messageText}>{respuestas[respuesta].consejo}</Text>
-              <Text style={styles.messageText}>{respuestas[respuesta].verso}</Text>
-              <Text style={styles.messageText}>{respuestas[respuesta].reflexion}</Text>
-            </View>
+            {consulta && (
+              <View style={styles.messageBot}>
+                <Text style={styles.messageText}>{consulta}</Text>
+              </View>
+            )}
 
-            <TouchableOpacity style={styles.button} onPress={() => setRespuesta(null)}>
+            <TouchableOpacity style={styles.button} onPress={() => { setRespuesta(null); setConsulta(null); }}>
               <Text style={styles.buttonText}>Volver a preguntar</Text>
             </TouchableOpacity>
 
